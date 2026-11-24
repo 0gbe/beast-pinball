@@ -1,7 +1,7 @@
 # Beast PinBall — design notes
 
 Title: **Beast PinBall**. Repo will be `0gbe/beast-pinball`, served at https://0gbe.github.io/beast-pinball/.
-Art: the user's (@_0gbe) four 3D vinyl-toy characters. Style = soft studio render, toy-like, glossy.
+Art: four 3D vinyl-toy characters (Ogbe's NFTs; Ogbe is not the artist, so never credit the art to him). Style = soft studio render, toy-like, glossy.
 
 ## Pillars
 1. **It never gets stuck.** Reliability beats everything.
@@ -33,7 +33,7 @@ Art: the user's (@_0gbe) four 3D vinyl-toy characters. Style = soft studio rende
 ## Bonus table "The Void"
 Triggered when score ≥ threshold (250K, 1M, 2.5M, 5M, 8M, then +4M). Only fires when exactly one ball is in normal
 play on the main table (never mid-multiball / ramp / scoop). Hypno-spiral teleport transition (from HYPNO's glasses).
-60 s countdown (DMD + big on-table number + ring). Ring of 6 bumpers around a giant eye "core" bumper that watches the
+19 s countdown (was 60 s in the first build; shortened at Ogbe's request) (DMD + big on-table number + ring). Ring of 6 bumpers around a giant eye "core" bumper that watches the
 ball, 12 golden eyes (one pink super eye). Drains on the bonus table are free (ball re-served from the top). 2x scoring.
 Return: same transition, ball appears in the eye scoop and is kicked out with a 6 s ball save. Next threshold is at
 least +250K above the current score so you can't chain teleports.
@@ -67,3 +67,22 @@ Recommended backend: Supabase free tier (sign in with GitHub). See backend/READM
 * Mobile haptics (`navigator.vibrate`) on flips/bumpers; nudge by device shake.
 * Replay score / match animation; per-player initials with daily/weekly global boards.
 * Settings: ball save time, music volume, left-handed controls.
+
+## Publishing (text-only repo)
+**Live game:** https://0gbe.github.io/beast-pinball/ served by the GitHub *user site* repo **0gbe/0gbe.github.io**
+(GitHub Pages publishes user-site repos from `main` automatically; the user can't sign in on the web to enable
+Pages on a project repo). The game lives in the folder `beast-pinball/` of that repo; the repo root has a small
+`index.html` that redirects to `beast-pinball/` and a `.nojekyll`.
+
+**Daily update procedure**
+1. Edit the dev source in `/workspace/eyeball-pinball` (split js/*.js, css/, assets/), run the tests.
+2. Rebuild `publish-copy/` with `python3 tools/build-publish.py` (does all of this): `python3 tools/build-assets-data.py`, concatenate js in this order: assets-data, physics,
+   tables, eyeball, dmd, audio, scores, render, game → `js/beast-pinball.js`; inline css/style.css into index.html;
+   keep `js/config.js` separate (Supabase keys). No og:image (binary PNGs can't be pushed).
+3. Re-test publish-copy in headless Chromium from a `/beast-pinball/` sub-path (0 console errors, sprites load).
+4. ONE `push_files` commit to **0gbe/0gbe.github.io**, branch `main`, every path prefixed `beast-pinball/`.
+   The connector allows max 4 `$file:` arguments per call, so pass the 4 big files (index.html, js/beast-pinball.js,
+   README.md, NOTES.md) as `$file:` and the small ones (config.js, CHANGELOG.md, backend/*, .nojekyll) as literal text.
+   Updating existing files with push_files needs no SHAs.
+5. Optional mirror: same files (no prefix) to **0gbe/beast-pinball** (source mirror; Pages is NOT enabled there).
+6. Poll https://0gbe.github.io/beast-pinball/ until it serves the new version (Pages builds take ~1-2 min).

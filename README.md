@@ -1,8 +1,8 @@
 # Beast PinBall
 
-A browser pinball game by **Ogbe (@_0gbe)**, starring the vinyl-toy crew and an eyeball for a ball.
+A browser pinball game by **Ogbe**, starring the vinyl-toy crew and an eyeball for a ball.
 
-**Play:** https://0gbe.github.io/beast-pinball/
+**Play:** https://0gbe.github.io/beast-pinball/  (published from the `beast-pinball/` folder of 0gbe/0gbe.github.io)
 
 * Static site, no build step. All paths are relative (works from the `/beast-pinball/` sub-path).
 * Character sprites are embedded as data URIs inside `js/beast-pinball.js`, so the repo is text-only.
