@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4 — 2026-11-25
+* Eye Mood: the eyeball's iris follows your combo streak. Calm (the classic look) normally, a focused electric-blue iris on a 2X combo, and a bloodshot red "frenzy" glow at 3X and up. It eases back to calm a couple of seconds after the combo ends.
+* Beast Wake-Up: each of the 4 toys on the main table wakes up (glows, brightens and hops) when you hit it or the shot right next to it: Hypno = left orbit, Brim = right ramp, Hood = left inlane, Racc = right inlane. Wake all 4 for a BEAST PARTY: dot-matrix callout, synthesized drum hit, 75,000 (+25,000 for each further party in a game, up to 200,000). The toys go back to sleep after the party and at the start of every ball.
+* Today's Challenge: one goal per day, picked from the date (Puerto Rico time) out of 10 (Ramp Rush, Void Walker, Wake the Beasts, Bumper Bash, Spin Doctor, Drop Zone, Toy Tapper, Combo Craze, Multiball Mania, Half a Million). Shown on the title screen and the dot-matrix attract loop, with a progress line on the apron while you play. Finishing it gives +100,000 and a callout. Games that finish it go on a "Today's Challenge" board (name, score, time to finish), saved on this device. A global Supabase board is optional and off by default.
 ## v1.3 — 2026-11-25
 * The Void: a soft tick plays once per second during the last 5 seconds of the countdown (5, 4, 3, 2, 1).
 

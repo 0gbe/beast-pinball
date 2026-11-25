@@ -68,6 +68,11 @@ Recommended backend: Supabase free tier (sign in with GitHub). See backend/READM
 * Replay score / match animation; per-player initials with daily/weekly global boards.
 * Settings: ball save time, music volume, left-handed controls.
 
+## v1.4 features (how they work)
+* Eye Mood: `G.eyeMood` 0..2 eases toward the combo target (2X combo = 1 focused, 3X+ = 2 frenzy) while the 4 s combo window is open, then back to 0 at 0.8/s. `drawEye` uses the original colours when mood is 0 (tested pixel-identical to v1.3).
+* Beast Wake-Up: `G.beastsAwake[4]` is separate from the multiball `charsLit`. Triggers: toy hit, or HYPNO = left orbit (upward spinner shot), BRIM = right ramp, HOOD = left inlane, RACC = right inlane. Party = 75K + 25K per extra party (cap 200K), 2.5 s, then reset; reset each ball.
+* Daily Challenge: `challengeFor(day)` = FNV hash of the Puerto Rico date into the 10-goal pool, never the same goal two days running. Board: localStorage `beastPinball.daily.v1` (last 14 days); optional Supabase table `daily_scores` when `dailyTable` is set in config.js. Achievability is checked with `tests/daily-tune.mjs` (autoplay completion rates).
+
 ## Publishing (text-only repo)
 **Live game:** https://0gbe.github.io/beast-pinball/ served by the GitHub *user site* repo **0gbe/0gbe.github.io**
 (GitHub Pages publishes user-site repos from `main` automatically; the user can't sign in on the web to enable
@@ -89,3 +94,8 @@ Pages on a project repo). The game lives in the folder `beast-pinball/` of that 
 
 ## Suggested ideas
 * 2026-11-24: Soft "tick" (existing audio tick sound, currently unused) once per second during the last 5 seconds of The Void countdown, synced with the red flashing number. Status: approved by Ogbe 2026-11-25, built in v1.3.
+* 2026-11-25: Eye Mood: the eyeball's iris changes color with your combo streak (calm, focused, bloodshot "frenzy" glow). Status: approved by Ogbe 2026-11-25, built in v1.4.
+* 2026-11-25: Blink Save: once per ball, a perfectly timed double-flip makes the eyeball "blink" and phase through the drain once. Status: passed (not chosen by Ogbe, 2026-11-25).
+* 2026-11-25: Beast Wake-Up: hitting each of the 4 small characters lights them up; light all 4 for a short "Beast Party" jackpot with a drum hit. Status: approved by Ogbe 2026-11-25, built in v1.4.
+* 2026-11-25: Daily Challenge: one seeded goal per day (e.g. 3 ramps in 20s) with its own mini leaderboard. Status: approved by Ogbe 2026-11-25, built in v1.4.
+* 2026-11-25: Ghost Replay: a faint ghost eyeball replays the top high score's last ball on the attract screen. Status: passed (not chosen by Ogbe, 2026-11-25).

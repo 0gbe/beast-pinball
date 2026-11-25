@@ -395,8 +395,24 @@ window.BEAST_ASSETS = {
     b.dilate = Math.min(1, b.dilate + 0.5 * strength + 0.15);
   }
 
+  // Eye Mood palettes (inner, mid, outer, edge). Mood 0 = calm = the classic eye, drawn with the original constants.
+  const MOODS = [['#ffb428', '#18d6c4', '#0b4f6a', '#061a24'], ['#e8fbff', '#2f8cff', '#1b2a8a', '#05081f'], ['#ffe14a', '#ff2a1a', '#7a0012', '#1a0004']];
+  const hx = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const MOODS_RGB = MOODS.map(p => p.map(hx));
+  function moodColors(m) {
+    const i = Math.min(1, Math.floor(m)), f = Math.min(1, m - i), A = MOODS_RGB[i], B = MOODS_RGB[i + 1];
+    return A.map((a, k) => 'rgb(' + a.map((v, j) => Math.round(v + (B[k][j] - v) * f)).join(',') + ')');
+  }
   function drawEye(ctx, b, x, y, r, opts = {}) {
     const lift = opts.lift || 0;
+    const mood = Math.max(0, Math.min(2, opts.mood || 0)), fz = Math.max(0, mood - 1); // fz: frenzy amount 0..1
+    // frenzy glow halo behind the eye
+    if (fz > 0) {
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const pulse = 0.75 + 0.25 * Math.sin(performance.now() / 90);
+      const hg = ctx.createRadialGradient(x, y, r * 0.8, x, y, r * 2.3); hg.addColorStop(0, `rgba(255,40,30,${0.55 * fz * pulse})`); hg.addColorStop(1, 'rgba(255,0,0,0)');
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(x, y, r * 2.3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
     // drop shadow
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -408,6 +424,7 @@ window.BEAST_ASSETS = {
     const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r * 1.05);
     g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, '#f4ece6'); g.addColorStop(0.85, '#e5b9ae'); g.addColorStop(1, '#a8615a');
     ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    if (fz > 0) { ctx.fillStyle = `rgba(255,40,50,${0.22 * fz})`; ctx.fillRect(x - r, y - r, r * 2, r * 2); } // bloodshot flush
     // veins (rolling with the ball)
     ctx.lineCap = 'round';
     for (const v of VEINS) {
@@ -416,7 +433,7 @@ window.BEAST_ASSETS = {
         const q = xf(b.rot, p);
         if (prev && q[2] > -0.05 && prev[2] > -0.05) {
           const a = Math.min(1, (q[2] + 0.05) * 2.2);
-          ctx.strokeStyle = `rgba(190,25,35,${0.75 * a})`; ctx.lineWidth = v.w * r / 11;
+          ctx.strokeStyle = mood > 0.002 ? `rgba(${190 + Math.round(40 * fz)},${25 - Math.round(15 * fz)},35,${Math.min(1, 0.75 * a * (1 + fz * 0.35))})` : `rgba(190,25,35,${0.75 * a})`; ctx.lineWidth = v.w * r / 11 * (1 + fz * 0.45);
           ctx.beginPath(); ctx.moveTo(x + prev[0] * r, y + prev[1] * r); ctx.lineTo(x + q[0] * r, y + q[1] * r); ctx.stroke();
         }
         prev = q;
@@ -429,8 +446,9 @@ window.BEAST_ASSETS = {
     ctx.save();
     ctx.translate(ix, iy); ctx.rotate(ang); ctx.scale(squash, 1);
     const ig = ctx.createRadialGradient(0, 0, ir * 0.15, 0, 0, ir);
-    const c1 = opts.iris1 || '#18d6c4', c2 = opts.iris2 || '#ffb428';
-    ig.addColorStop(0, c2); ig.addColorStop(0.45, c1); ig.addColorStop(0.85, '#0b4f6a'); ig.addColorStop(1, '#061a24');
+    let c1 = opts.iris1 || '#18d6c4', c2 = opts.iris2 || '#ffb428', c3 = '#0b4f6a', c4 = '#061a24';
+    if (mood > 0.002 && !opts.iris1) [c2, c1, c3, c4] = moodColors(mood);
+    ig.addColorStop(0, c2); ig.addColorStop(0.45, c1); ig.addColorStop(0.85, c3); ig.addColorStop(1, c4);
     ctx.fillStyle = ig; ctx.beginPath(); ctx.arc(0, 0, ir, 0, Math.PI * 2); ctx.fill();
     // striations / hypno spiral, spinning with roll
     ctx.rotate(b.irisSpin);
@@ -442,7 +460,8 @@ window.BEAST_ASSETS = {
       ctx.stroke();
     }
     // pupil
-    const pr = ir * (0.42 + b.dilate * 0.35 - (opts.scared ? 0.2 : 0));
+    const focus = Math.min(1, mood) - fz * 0.6; // focused eye: pupil narrows; frenzy: wider again
+    const pr = ir * (0.42 + b.dilate * 0.35 - (opts.scared ? 0.2 : 0) - (mood > 0.002 ? focus * 0.1 : 0));
     ctx.fillStyle = '#050208'; ctx.beginPath(); ctx.arc(0, 0, pr, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
     // limbal shading
@@ -464,7 +483,7 @@ window.BEAST_ASSETS = {
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.beginPath(); ctx.arc(x + r * 0.3, y + r * 0.38, r * 0.08, 0, Math.PI * 2); ctx.fill();
   }
-  Object.assign(BP, { updateEye, hitEye, drawEye });
+  Object.assign(BP, { updateEye, hitEye, drawEye, moodColors, EYE_MOODS: MOODS });
 })();
 
 /* ===== dmd.js ===== */
@@ -572,6 +591,8 @@ window.BEAST_ASSETS = {
     extra: () => { [659, 784, 988, 1319, 988, 1319].forEach((f, i) => tone('square', f, 0, 0.12, 0.13, null, i * 0.1)); },
     start: () => { [262, 330, 392, 523, 659, 784].forEach((f, i) => tone('square', f, 0, 0.14, 0.12, null, i * 0.07)); },
     tick: () => { tone('square', 1800, 0, 0.03, 0.1); },
+    // Beast Party drum hit: kick + snare + a short crash
+    drum: () => { tone('sine', 160, 42, 0.28, 0.9); noise(0.16, 0.45, 1800, 0.9); tone('triangle', 190, 120, 0.1, 0.25); tone('sine', 150, 42, 0.24, 0.7, null, 0.14); noise(0.7, 0.18, 7000, 0.6, 'highpass', 0.14); },
   };
   function play(name) { if (!A.ctx || A.muted) return; try { SFX[name] && SFX[name](); } catch (e) { } }
   // Simple sequenced groove (bass + hats + arp). Different scale on the bonus table.
@@ -658,7 +679,57 @@ window.BEAST_ASSETS = {
     const remote = c.supabaseUrl && c.supabasePublishableKey ? new SupabaseScores(c.supabaseUrl, c.supabasePublishableKey, c.table) : null;
     return new HybridScores(remote, new LocalScores());
   }
-  Object.assign(BP, { LocalScores, SupabaseScores, HybridScores, makeScoreStore, cleanName: clean });
+
+  // ---- Daily Challenge board: completions of today's challenge, one list per day ----
+  //   list(day, limit) -> [{name, score, secs, day}],  submit(day, name, score, secs)
+  const DKEY = 'beastPinball.daily.v1';
+  class LocalDaily {
+    constructor() { this.label = 'THIS DEVICE'; }
+    _read() { try { const v = JSON.parse(localStorage.getItem(DKEY)); if (Array.isArray(v)) return v; } catch (e) { } return []; }
+    _write(v) { try { localStorage.setItem(DKEY, JSON.stringify(v)); } catch (e) { } }
+    async list(day, limit = 5) { return this._read().filter(e => e.day === day).sort((a, b) => b.score - a.score || a.secs - b.secs).slice(0, limit); }
+    async submit(day, name, score, secs) {
+      const e = { day, name: clean(name), score: Math.max(0, Math.floor(score)), secs: Math.max(0, Math.round(secs)) };
+      // keep the last 14 days, at most 30 entries per day
+      const days = [...new Set(this._read().map(x => x.day).concat(day))].sort().slice(-14);
+      let v = this._read().concat(e).filter(x => days.includes(x.day));
+      const per = {}; v.sort((a, b) => b.score - a.score); v = v.filter(x => (per[x.day] = (per[x.day] || 0) + 1) <= 30);
+      this._write(v); return e;
+    }
+  }
+  class SupabaseDaily {
+    constructor(sb, table) { this.sb = sb; this.table = table; this.label = 'GLOBAL'; }
+    async list(day, limit = 5) {
+      const r = await fetch(`${this.sb.url}/rest/v1/${this.table}?select=name,score,secs,day&day=eq.${encodeURIComponent(day)}&order=score.desc&limit=${limit}`, { headers: this.sb.headers() });
+      if (!r.ok) throw new Error('daily list ' + r.status);
+      return (await r.json()).map(x => ({ day: x.day, name: x.name, score: Number(x.score), secs: Number(x.secs) }));
+    }
+    async submit(day, name, score, secs) {
+      const body = { day, name: clean(name), score: Math.max(0, Math.floor(score)), secs: Math.max(0, Math.round(secs)) };
+      const r = await fetch(`${this.sb.url}/rest/v1/${this.table}`, { method: 'POST', headers: Object.assign(this.sb.headers(), { Prefer: 'return=minimal' }), body: JSON.stringify(body) });
+      if (!r.ok) throw new Error('daily submit ' + r.status);
+      return body;
+    }
+  }
+  class HybridDaily {
+    constructor(remote, local) { this.remote = remote; this.local = local; this.label = 'THIS DEVICE'; }
+    async list(day, limit = 5) {
+      if (this.remote) { try { const v = await this.remote.list(day, limit); this.label = 'GLOBAL'; return v; } catch (e) { console.warn('[daily] remote unavailable, using local', e.message); this.label = 'THIS DEVICE'; } }
+      return this.local.list(day, limit);
+    }
+    async submit(day, name, score, secs) {
+      const e = await this.local.submit(day, name, score, secs);
+      if (this.remote) { try { await this.remote.submit(day, name, score, secs); } catch (err) { console.warn('[daily] remote submit failed', err.message); } }
+      return e;
+    }
+  }
+  // Remote daily board only when Supabase is configured AND config.dailyTable is set (off by default).
+  function makeDailyStore() {
+    const c = window.BEAST_CONFIG || {};
+    const remote = c.supabaseUrl && c.supabasePublishableKey && c.dailyTable ? new SupabaseDaily(new SupabaseScores(c.supabaseUrl, c.supabasePublishableKey), c.dailyTable) : null;
+    return new HybridDaily(remote, new LocalDaily());
+  }
+  Object.assign(BP, { LocalScores, SupabaseScores, HybridScores, makeScoreStore, cleanName: clean, LocalDaily, SupabaseDaily, HybridDaily, makeDailyStore });
 })();
 
 /* ===== render.js ===== */
@@ -922,19 +993,28 @@ window.BEAST_ASSETS = {
     ctx.fillStyle = '#7c8396'; ctx.beginPath(); ctx.arc(f.px, f.py, 4.5, 0, TAU); ctx.fill();
     ctx.fillStyle = '#e8ecf5'; ctx.beginPath(); ctx.arc(f.px - 1, f.py - 1, 2, 0, TAU); ctx.fill();
   }
-  function drawChar(ctx, c, t, lit, dim) {
+  function drawChar(ctx, c, t, lit, dim, awake, party) {
     const im = R.imgs[c.key]; if (!im) return;
     const h = c.h || 76, w = h * im.width / im.height;
+    // Beast Wake-Up: a small hop when it wakes (and a dance during the Beast Party)
+    const hop = c.hop || 0, ph = c.x * 0.05;
+    const jump = party ? Math.abs(Math.sin(t * 11 + ph)) * 9 : hop > 0 ? Math.abs(Math.sin((1 - hop) * Math.PI * 2)) * 10 * hop : 0;
     // base shadow + light ring
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.ellipse(c.x + 6, c.y + 14, w * 0.55, 8, 0, 0, TAU); ctx.fill();
     if (lit) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(c.x, c.y + 8, 2, c.x, c.y + 8, 40); g.addColorStop(0, c.color); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = 0.6 + 0.3 * Math.sin(t * 6); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y + 8, 40, 0, TAU); ctx.fill(); ctx.restore(); }
     // stand base disc
     if (!c.decor) { const bg = ctx.createRadialGradient(c.x - 4, c.y + 8, 2, c.x, c.y + 10, 18); bg.addColorStop(0, '#e9edf5'); bg.addColorStop(1, '#5b6172'); ctx.fillStyle = bg; ctx.beginPath(); ctx.ellipse(c.x, c.y + 10, 17, 7, 0, 0, TAU); ctx.fill(); }
-    ctx.save(); ctx.translate(c.x, c.y + 12);
+    if (awake) { // waking glow: a soft colored halo around the toy
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(c.x, c.y - h * 0.45, 4, c.x, c.y - h * 0.45, h * 0.75);
+      g.addColorStop(0, c.color); g.addColorStop(0.45, c.color + '88'); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 5 + ph); ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(c.x, c.y - h * 0.45, h * 0.75, 0, TAU); ctx.fill(); ctx.restore();
+    }
+    ctx.save(); ctx.translate(c.x, c.y + 12 - jump);
     const wob = c.wob || 0; ctx.rotate(Math.sin(t * 28) * wob * 0.25); ctx.scale(1 + wob * 0.08, 1 - wob * 0.06);
     if (dim) ctx.globalAlpha = 0.85;
     ctx.drawImage(im, -w / 2, -h, w, h);
     if (wob > 0.3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = wob * 0.5; ctx.drawImage(im, -w / 2, -h, w, h); }
+    if (awake) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.4 + 0.12 * Math.sin(t * 5 + ph) + (party ? 0.2 : 0); ctx.drawImage(im, -w / 2, -h, w, h); } // brighten
     ctx.restore();
   }
   function drawRamp(ctx, rp, t, lit) {
@@ -1045,7 +1125,7 @@ window.BEAST_ASSETS = {
     // bumpers
     for (const b of def.bumpers) drawBumper(ctx, b, t, bonus);
     // characters (standups) & decor
-    if (!bonus) def.chars.forEach((c, i) => drawChar(ctx, c, t, G.charsLit[i], false));
+    if (!bonus) { const party = G.partyUntil > 0 && G.gameTime < G.partyUntil; def.chars.forEach((c, i) => drawChar(ctx, c, t, G.charsLit[i], false, G.mode === 'play' && G.beastsAwake && G.beastsAwake[i], party)); }
     else for (const d of def.decor) drawChar(ctx, Object.assign(d, { h: 60, decor: true, color: '#ffd23a' }), t, true, true);
     // flippers
     drawFlipper(ctx, def.flippers.L, bonus); drawFlipper(ctx, def.flippers.R, bonus);
@@ -1054,13 +1134,13 @@ window.BEAST_ASSETS = {
       if (b.state === 'ramp') continue;
       if (b.state === 'held') { ctx.globalAlpha = 0.85; }
       for (let i = 0; i < b.trail.length; i++) { const p = b.trail[i]; ctx.fillStyle = `rgba(255,${120 + i * 8},200,${i / b.trail.length * 0.18})`; ctx.beginPath(); ctx.arc(p[0], p[1], b.r * (0.4 + i / b.trail.length * 0.5), 0, TAU); ctx.fill(); }
-      BP.drawEye(ctx, b, b.x, b.y, b.r * (b.state === 'held' ? 0.85 : 1), { scared: b.y > 900 && b.vy > 300 });
+      BP.drawEye(ctx, b, b.x, b.y, b.r * (b.state === 'held' ? 0.85 : 1), { scared: b.y > 900 && b.vy > 300, mood: G.eyeMood });
       ctx.globalAlpha = 1;
     }
     // ramps (above playfield), then balls riding them
     if (!bonus) {
       for (const rp of def.ramps) drawRamp(ctx, rp, t, G.rampLit(rp.id));
-      for (const b of G.balls()) if (b.state === 'ramp') BP.drawEye(ctx, b, b.x, b.y, b.r * 1.22, { lift: 1 });
+      for (const b of G.balls()) if (b.state === 'ramp') BP.drawEye(ctx, b, b.x, b.y, b.r * 1.22, { lift: 1, mood: G.eyeMood });
     }
     // particles & popups
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -1069,6 +1149,12 @@ window.BEAST_ASSETS = {
     ctx.textAlign = 'center'; ctx.font = '900 16px "Arial Black", Arial, sans-serif';
     for (let i = R.popups.length - 1; i >= 0; i--) { const p = R.popups[i]; p.life -= dt; if (p.life <= 0) { R.popups.splice(i, 1); continue; } p.y -= dt * 40; ctx.globalAlpha = Math.min(1, p.life * 2); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.strokeText(p.text, p.x, p.y); ctx.fillStyle = p.col; ctx.fillText(p.text, p.x, p.y); }
     ctx.globalAlpha = 1;
+    // Daily Challenge progress line (right apron, main table only)
+    if (!bonus && G.mode === 'play' && G.challengeLine) {
+      const line = G.challengeLine(), done = G.ch && G.ch.done;
+      ctx.save(); ctx.textAlign = 'right'; ctx.font = 'bold 11px Arial, sans-serif';
+      ctx.fillStyle = done ? 'rgba(61,255,158,0.9)' : 'rgba(255,210,60,0.8)'; ctx.fillText(line, 530, 975); ctx.restore();
+    }
     // bonus table countdown
     if (bonus && G.bonusLeft > 0) {
       const s = Math.ceil(G.bonusLeft); ctx.save(); ctx.textAlign = 'center'; ctx.font = '900 64px "Arial Black", Impact, sans-serif';
@@ -1113,9 +1199,9 @@ window.BEAST_ASSETS = {
   const G = window.G = {
     mode: 'attract', tableName: 'main', clock: 0, gameTime: 0, paused: false,
     score: 0, ballNum: 1, ballsPerGame: 3, extraBalls: 0,
-    stats: { stuckNudges: 0, ejects: 0, oob: 0, drains: 0, bonusEntered: 0, bonusExited: 0, errors: [], rampsMade: 0, saves: 0, multiballs: 0, missionsStarted: 0, kickbacks: 0, games: 0 },
+    stats: { stuckNudges: 0, ejects: 0, oob: 0, drains: 0, bonusEntered: 0, bonusExited: 0, errors: [], rampsMade: 0, saves: 0, multiballs: 0, missionsStarted: 0, kickbacks: 0, games: 0, wakes: 0, parties: 0, challengesDone: 0 },
     dmd: new BP.DMD(), msgs: [], autoplay: false, keys: {}, input: { L: false, R: false, plunger: false },
-    plungerPower: 0, coreEye: new BP.Ball(0, 0), scoreCache: [], store: BP.makeScoreStore(),
+    plungerPower: 0, coreEye: new BP.Ball(0, 0), scoreCache: [], store: BP.makeScoreStore(), dailyStore: BP.makeDailyStore(), dailyCache: [], eyeMood: 0,
   };
   const ev = (name, ...a) => { if (G.log && name !== 'scoop') G.log.push(name + (typeof a[0] === 'string' ? a[0] : '')); const h = H[name]; if (h && G.mode === 'play') h(...a); };
   G.tables = { main: BP.buildMain(ev), bonus: BP.buildBonus(ev) };
@@ -1135,9 +1221,11 @@ window.BEAST_ASSETS = {
       comboN: 0, lastShot: -9, nextBonusAt: nextLadder(0), bonusCount: 0, bonusLeft: 0, bonusDuration: 19,
       tiltMeter: 0, tiltWarn: 0, tilted: false, serveQueue: 0, ballSaveUntil: 0, savePending: true, skillActive: false, skillLane: 0,
       ballStats: newBallStats(), dropResetAt: 0, rampCount: 0, giFlash: 0, trans: null, endBallAt: 0, tableName: 'main', gameTime: 0,
+      beastsAwake: [false, false, false, false], partyCount: 0, partyUntil: 0, dailyPending: null,
     });
+    G.ch = newChallenge();
     for (const d of MD.drops) { d.down = false; d.on = true; }
-    for (const c of MD.chars) c.wob = 0;
+    for (const c of MD.chars) { c.wob = 0; c.hop = 0; }
     for (const k in G.tables) G.tables[k].world.balls = [];
   }
   function newBallStats() { return { chars: 0, ramps: 0, drops: 0, spins: 0, bumpers: 0 }; }
@@ -1174,12 +1262,85 @@ window.BEAST_ASSETS = {
     I.push({ x: 280, y: 680, shape: 'rect', w: 56, h: 11, color: '#ffffff', label: 'EXTRA BALL', fs: 6, lit: () => G.extraBalls > 0 });
   })();
 
+
+  // ---------- Daily Challenge ----------
+  // One goal per day, picked from the date in America/Puerto_Rico (same for every player that day).
+  const CHALLENGES = [
+    { id: 'ramprush', dmd: '3 RAMPS IN 20 SEC', name: 'RAMP RUSH', desc: 'MAKE 3 RAMPS IN 20 SECONDS', short: 'RAMPS', need: 3, ev: 'ramp', window: 20 },
+    { id: 'void', dmd: 'REACH THE VOID', name: 'VOID WALKER', desc: 'REACH THE VOID', short: 'VOID', need: 1, ev: 'void' },
+    { id: 'beasts', dmd: 'LIGHT ALL 4 BEASTS', name: 'WAKE THE BEASTS', desc: 'LIGHT ALL 4 BEASTS', short: 'BEAST PARTY', need: 1, ev: 'party' },
+    { id: 'bumpers', dmd: '30 POP BUMPERS', name: 'BUMPER BASH', desc: 'HIT 30 POP BUMPERS', short: 'BUMPERS', need: 30, ev: 'bumper' },
+    { id: 'spinner', dmd: 'SPIN 40 TIMES', name: 'SPIN DOCTOR', desc: 'SPIN THE SPINNER 40 TIMES', short: 'SPINS', need: 40, ev: 'spin' },
+    { id: 'drops', dmd: 'CLEAR DROPS 3X', name: 'DROP ZONE', desc: 'CLEAR THE DROP TARGETS 3 TIMES', short: 'DROP BANKS', need: 3, ev: 'dropbank' },
+    { id: 'toys', dmd: 'HIT THE TOYS 12 TIMES', name: 'TOY TAPPER', desc: 'HIT THE TOYS 12 TIMES', short: 'TOY HITS', need: 12, ev: 'char' },
+    { id: 'combo', dmd: 'MAKE A 2X COMBO', name: 'COMBO CRAZE', desc: 'MAKE A 2X COMBO', short: 'COMBO', need: 2, ev: 'combo' },
+    { id: 'multiball', dmd: 'START MULTIBALL', name: 'MULTIBALL MANIA', desc: 'START BEAST MULTIBALL', short: 'MULTIBALL', need: 1, ev: 'multiball' },
+    { id: 'halfmil', dmd: 'SCORE 500,000', name: 'HALF A MILLION', desc: 'SCORE 500,000 IN ONE GAME', short: 'SCORE', need: 500000, ev: 'score' },
+  ];
+  const CH_BONUS = 100000;
+  function dayKey(d = new Date()) {
+    if (G.dayOverride) return G.dayOverride;
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Puerto_Rico', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); }
+    catch (e) { return new Date(d.getTime() - 4 * 3600e3).toISOString().slice(0, 10); } // Puerto Rico is UTC-4 all year
+  }
+  function hashDay(k) { let h = 2166136261; for (const c of k) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; }
+  function challengeFor(day) {
+    const pick = k => hashDay('beast:' + k) % CHALLENGES.length;
+    const [y, m, dd] = day.split('-').map(Number), prev = new Date(Date.UTC(y, m - 1, dd - 1)).toISOString().slice(0, 10);
+    let i = pick(day); if (i === pick(prev)) i = (i + 1) % CHALLENGES.length; // never the same goal two days running
+    return CHALLENGES[i];
+  }
+  function newChallenge() { const day = dayKey(); return { day, def: challengeFor(day), n: 0, times: [], done: false, secs: 0 }; }
+  G.challengeToday = () => challengeFor(dayKey());
+  function chEvent(ev, val) {
+    const c = G.ch; if (!c || c.done || G.mode !== 'play' || c.def.ev !== ev) return;
+    const d = c.def;
+    if (d.window) { c.times.push(G.gameTime); c.times = c.times.filter(t => G.gameTime - t <= d.window); c.n = c.times.length; }
+    else if (ev === 'combo' || ev === 'score') c.n = Math.max(c.n, val);
+    else c.n += (val || 1);
+    if (c.n >= d.need) {
+      c.done = true; c.n = d.need; c.secs = G.gameTime; G.stats.challengesDone++;
+      if (!G.tilted) G.score += CH_BONUS;
+      G.msg('DAILY CHALLENGE', 'COMPLETE +' + BP.fmt(CH_BONUS), 2.5); AU.play('extra'); AU.callout('Challenge complete!');
+      G.giFlash = 1; R.particle(280, 900, '#3dff9e', 30, 320);
+    }
+  }
+  G.challengeLine = () => {
+    const c = G.ch; if (!c) return '';
+    if (c.done) return 'TODAY: CHALLENGE DONE!';
+    const d = c.def;
+    if (d.ev === 'score') return 'TODAY: ' + BP.fmt(Math.min(G.score, d.need)) + ' / 500K';
+    let n = c.n; if (d.window) n = c.times.filter(t => G.gameTime - t <= d.window).length;
+    return 'TODAY: ' + d.short + ' ' + n + '/' + d.need + (d.window ? ' IN ' + d.window + 'S' : '');
+  };
+
+  // ---------- Beast Wake-Up ----------
+  // Each toy wakes when the ball hits it or a shot right next to it:
+  //   HYPNO (top left) = left orbit / spinner, BRIM (right) = right ramp, HOOD = left inlane, RACC = right inlane.
+  const PARTY_SECS = 2.5;
+  function wake(i) {
+    if (G.tableName !== 'main' || G.mode !== 'play' || G.tilted || G.gameTime < G.partyUntil || G.beastsAwake[i]) return;
+    G.beastsAwake[i] = true; G.stats.wakes++;
+    const c = MD.chars[i]; c.hop = 1; R.particle(c.x, c.y - 20, c.color, 10, 160); R.popup(c.x, c.y - 84, c.name + ' AWAKE', c.color);
+    if (G.beastsAwake.every(Boolean)) beastParty();
+  }
+  function beastParty() {
+    G.partyCount++; G.stats.parties++;
+    const v = add(Math.min(200000, 75000 + 25000 * (G.partyCount - 1)));
+    G.partyUntil = G.gameTime + PARTY_SECS;
+    G.msg('BEAST PARTY', BP.fmt(v), PARTY_SECS, { now: true }); AU.play('drum'); AU.callout('Beast party!');
+    G.giFlash = 1; G.giColor = '61,255,158'; R.shake = 8; G.partyGi = true;
+    for (const c of MD.chars) { c.hop = 1; R.particle(c.x, c.y - 20, c.color, 18, 260); }
+    chEvent('party');
+  }
+  function endParty() { G.partyUntil = 0; G.beastsAwake = [false, false, false, false]; if (G.partyGi) { G.partyGi = false; if (G.giColor === '61,255,158') G.giColor = G.multiballActive ? '255,60,170' : null; } }
+
   // ---------- events ----------
   const H = {
-    inlane(side) { add(1000); G.inlanes[side] = true; AU.play('lane'); if (G.inlanes.L && G.inlanes.R) { G.inlanes = { L: false, R: false }; if (!G.kickbackLit) { G.kickbackLit = true; G.msg('KICKBACK', 'IS LIT', 1.5); } else add(10000); } },
+    inlane(side) { add(1000); G.inlanes[side] = true; AU.play('lane'); wake(side === 'L' ? 2 : 3); if (G.inlanes.L && G.inlanes.R) { G.inlanes = { L: false, R: false }; if (!G.kickbackLit) { G.kickbackLit = true; G.msg('KICKBACK', 'IS LIT', 1.5); } else add(10000); } },
     spinner(b, dy) {
       const s = MD.spinner; s.omega += Math.min(14, Math.abs(b.vy) / 90) * (dy < 0 ? 1 : -1);
-      if (dy < 0 && b.vy < -500) shot('ORBIT');
+      if (dy < 0 && b.vy < -500) { shot('ORBIT'); wake(0); }
     },
     toplane(i, b) {
       add(2000); AU.play('lane');
@@ -1219,6 +1380,7 @@ window.BEAST_ASSETS = {
   function shot(name) {
     if (G.clock - G.lastShot < 4) G.comboN++; else G.comboN = 1;
     G.lastShot = G.clock;
+    chEvent('combo', G.comboN);
     if (G.comboN >= 2) { const v = add(25000 * G.comboN); G.msg(G.comboN + 'X COMBO', BP.fmt(v), 1.4); AU.play('skill'); if (G.comboN === 3) AU.callout('Combo!'); }
   }
   function scoopAward(b) {
@@ -1231,7 +1393,7 @@ window.BEAST_ASSETS = {
   }
   function startMultiball() {
     G.multiballLit = false; G.multiballActive = true; G.jackpotLit = true; G.jackpots = 0; G.charsLit = [false, false, false, false];
-    G.serveQueue += 2; G.autoServe = true; G.ballSaveUntil = G.gameTime + 15; G.stats.multiballs++;
+    G.serveQueue += 2; G.autoServe = true; G.ballSaveUntil = G.gameTime + 15; G.stats.multiballs++; chEvent('multiball');
     G.msg('BEAST MULTIBALL', 'RAMPS = JACKPOT', 3, { now: true }); AU.play('jackpot'); AU.callout('Beast multiball!'); G.giFlash = 1; G.giColor = '255,60,170';
   }
   function startMission() {
@@ -1261,19 +1423,19 @@ window.BEAST_ASSETS = {
       case 'bumper': {
         obj.flash = 1; const v = add(G.tableName === 'bonus' ? 2500 : 1000); AU.play('bumper'); R.shake = Math.max(R.shake, 3);
         R.particle(b.x, b.y, G.tableName === 'bonus' ? '#ffd23a' : '#ff6ad5', 12); R.popup(obj.x, obj.y - 30, BP.fmt(v), '#fff');
-        BP.hitEye(b, 0.6); G.ballStats.bumpers++; missionProgress('bumper'); break;
+        BP.hitEye(b, 0.6); G.ballStats.bumpers++; missionProgress('bumper'); chEvent('bumper'); break;
       }
       case 'core': { obj.flash = 1; const v = add(7500); AU.play('bumper'); AU.play('target'); R.shake = 6; R.particle(b.x, b.y, '#ff3df2', 18, 300); R.popup(obj.x, obj.y - 50, BP.fmt(v), '#ff9af0'); BP.hitEye(b, 1); break; }
       case 'sling': if (!G.tilted) { add(110); AU.play('sling'); R.shake = Math.max(R.shake, 2); BP.hitEye(b, 0.4); R.particle(b.x, b.y, '#ffffff', 6, 150); } break;
       case 'char': {
         const c = MD.chars[obj.idx]; c.wob = 1; const v = add(5000); AU.play('char'); BP.hitEye(b, 0.8); R.popup(c.x, c.y - 70, c.name, c.color); R.particle(c.x, c.y, c.color, 14);
-        G.ballStats.chars++; missionProgress('char');
+        G.ballStats.chars++; missionProgress('char'); chEvent('char'); wake(obj.idx);
         if (!G.charsLit[obj.idx]) { G.charsLit[obj.idx] = true; if (G.charsLit.every(Boolean) && !G.multiballActive && !G.multiballLit) { G.multiballLit = true; G.msg('MULTIBALL LIT', 'SHOOT THE EYE SCOOP', 2.2); AU.callout('Multiball is lit'); } }
         break;
       }
       case 'drop': {
         if (obj.down) break; obj.down = true; obj.on = false; add(2500); AU.play('drop'); G.ballStats.drops++; BP.hitEye(b, 0.5);
-        if (MD.drops.every(d => d.down)) { add(25000); AU.play('bank'); if (!G.mission) { G.missionLit = true; G.msg('MISSION LIT', 'SHOOT THE EYE SCOOP', 2); } else G.msg('DROPS', BP.fmt(25000), 1.2); G.dropResetAt = G.gameTime + 15; }
+        if (MD.drops.every(d => d.down)) { add(25000); AU.play('bank'); chEvent('dropbank'); if (!G.mission) { G.missionLit = true; G.msg('MISSION LIT', 'SHOOT THE EYE SCOOP', 2); } else G.msg('DROPS', BP.fmt(25000), 1.2); G.dropResetAt = G.gameTime + 15; }
         break;
       }
       case 'flipper': BP.hitEye(b, 0.2); break;
@@ -1285,6 +1447,7 @@ window.BEAST_ASSETS = {
   function spawnInLane() { const b = new BP.Ball(MD.serve.x, MD.serve.y); G.tables.main.world.balls.push(b); return b; }
   function startBall() {
     G.tilted = false; G.tiltWarn = 0; G.tiltMeter = 0; G.bonusMult = 1; G.ballStats = newBallStats(); G.savePending = true;
+    endParty();
     for (const f of Object.values(MD.flippers)) f.enabled = true;
     const b = spawnInLane(); G.skillActive = true; G.skillLane = Math.floor(Math.random() * 3); G.autoServe = false;
     G.msg('BALL ' + G.ballNum, 'PLUNGE FOR SKILL SHOT', 2, { now: true });
@@ -1320,7 +1483,7 @@ window.BEAST_ASSETS = {
   // ---------- bonus table teleport ----------
   function teleport(label, x, y, swap) { G.trans = { p: 0, label, x, y, swap, swapped: false }; AU.play('teleport'); }
   function enterBonus(b) {
-    G.stats.bonusEntered++; G.bonusCount++; G.nextBonusAt = nextLadder(G.bonusCount);
+    G.stats.bonusEntered++; G.bonusCount++; G.nextBonusAt = nextLadder(G.bonusCount); chEvent('void');
     teleport('TELEPORT!', b.x, b.y, () => {
       G.tables.main.world.balls = [];
       G.tableName = 'bonus'; G.bonusLeft = G.bonusDuration; G.voidTickSec = 0;
@@ -1409,7 +1572,7 @@ window.BEAST_ASSETS = {
     // timers
     if (G.tableName === 'main') {
       const s = MD.spinner; s.angle += s.omega * STEP * TAU; s.acc = (s.acc || 0) + Math.abs(s.omega) * STEP;
-      while (s.acc >= 1) { s.acc -= 1; const v = add(300); G.ballStats.spins++; AU.play('spinner'); missionProgress('spin'); }
+      while (s.acc >= 1) { s.acc -= 1; const v = add(300); G.ballStats.spins++; AU.play('spinner'); missionProgress('spin'); chEvent('spin'); }
       s.omega *= Math.exp(-1.6 * STEP); if (Math.abs(s.omega) < 0.05) s.omega = 0;
       if (G.dropResetAt && G.gameTime >= G.dropResetAt) {
         const blocked = W.balls.some(b => b.y > 520 && b.y < 576 && b.x > 215 && b.x < 345);
@@ -1428,6 +1591,8 @@ window.BEAST_ASSETS = {
       for (const e of D.eyes) if (!e.alive && G.gameTime >= e.respawn) e.alive = true;
       if (G.bonusLeft <= 0 && !G.trans) { G.bonusLeft = 0; exitBonus(); }
     }
+    if (G.partyUntil && G.gameTime >= G.partyUntil) endParty();
+    chEvent('score', G.score);
     G.tiltMeter = Math.max(0, G.tiltMeter - STEP * 0.55);
     if (G.skillActive && G.gameTime > 1 && !waitingInLane() && G.balls().every(b => !inLane(b) || b.y < 300)) { /* still traveling */ }
     if (G.skillActive && G.balls().some(b => b.y > 300 && !inLane(b) && b.state === 'play')) G.skillActive = false;
@@ -1447,7 +1612,7 @@ window.BEAST_ASSETS = {
     if (G.multiballActive && G.jackpotLit) { G.jackpots++; v += add(150000); G.msg('JACKPOT', BP.fmt(150000), 2, { now: true }); AU.play('jackpot'); AU.callout('Jackpot!'); G.giFlash = 1; R.shake = 8; if (G.jackpots % 2 === 0) { G.superLit = true; G.msg('SUPER JACKPOT LIT', 'SHOOT THE SCOOP', 2); } }
     else G.msg(id === 'L' ? 'LEFT RAMP' : 'RIGHT RAMP', BP.fmt(v), 1);
     R.popup(b.x, b.y - 20, BP.fmt(v), id === 'L' ? '#36e0ff' : '#ff3df2'); R.particle(b.x, b.y, id === 'L' ? '#36e0ff' : '#ff3df2', 20);
-    missionProgress('ramp'); shot('RAMP' + id);
+    missionProgress('ramp'); chEvent('ramp'); if (id === 'R') wake(1); shot('RAMP' + id);
   }
   function pointInTri(x, y, [a, b, c]) {
     const s = (p, q, r) => (p[0] - r[0]) * (q[1] - r[1]) - (q[0] - r[0]) * (p[1] - r[1]);
@@ -1509,7 +1674,8 @@ window.BEAST_ASSETS = {
   function gameOver() {
     G.mode = 'over'; G.input = { L: false, R: false, plunger: false };
     for (const t of Object.values(G.tables)) t.world.balls = [];
-    G.tableName = 'main'; G.msg('GAME OVER', BP.fmt(G.score), 4, { now: true }); AU.stopMusic();
+    G.tableName = 'main'; G.msg('GAME OVER', BP.fmt(G.score), 4, { now: true }); AU.stopMusic(); endParty();
+    G.dailyPending = G.ch && G.ch.done ? { day: G.ch.day, score: G.score, secs: G.ch.secs } : null;
     showEntry();
   }
   G.startGame = startGame;
@@ -1529,7 +1695,7 @@ window.BEAST_ASSETS = {
       return;
     }
     if (G.mode === 'attract' || G.mode === 'over') {
-      const page = Math.floor(t / 3.5) % 5;
+      const page = Math.floor(t / 3.5) % 6;
       if (page === 0) { d.center('BEAST', 0, 2, 3); d.center('P I N B A L L', 15, 1, 2); d.center('BY OGBE', 24, 1, 3); for (let i = 0; i < 10; i++) d.px(Math.random() * 128, Math.random() * 32, 2); }
       else if (page === 1) { d.center('PRESS START', 5, 1, Math.floor(t * 3) % 2 ? 3 : 1); d.center('SPACE / TAP PLAY', 19, 1, 2); }
       else if (page === 2) {
@@ -1538,7 +1704,8 @@ window.BEAST_ASSETS = {
       } else if (page === 3) {
         d.circle(64, 16, 13, 3); const px = 64 + Math.cos(t * 2) * 6, py = 16 + Math.sin(t * 3) * 3; d.circle(px, py, 5, 2, true); d.circle(px, py, 2, 3, true);
         d.text('EYE', 98, 6, 1, 2); d.text('BALL', 98, 18, 1, 3);
-      } else { d.center('REACH 250,000', 4, 1, 3); d.center('TELEPORT TO THE VOID', 18, 1, 2); }
+      } else if (page === 4) { d.center('REACH 250,000', 4, 1, 3); d.center('TELEPORT TO THE VOID', 18, 1, 2); }
+      else { const c = G.challengeToday(); d.center("TODAY'S CHALLENGE", 0, 1, 2); d.center(c.name, 11, 1, 3); d.center(c.dmd, 23, 1, 2); }
       return;
     }
     if (G.tableName === 'bonus') {
@@ -1560,15 +1727,33 @@ window.BEAST_ASSETS = {
   const $ = id => document.getElementById(id);
   function hideAll() { for (const el of document.querySelectorAll('.overlay')) el.classList.add('hidden'); }
   function showStart() { hideAll(); G.mode = 'attract'; $('start').classList.remove('hidden'); refreshScores(); }
+  const fmtSecs = n => Math.floor(n / 60) + ':' + String(Math.floor(n % 60)).padStart(2, '0');
+  async function refreshDaily(highlight) {
+    const day = dayKey(), c = challengeFor(day);
+    try { G.dailyCache = await G.dailyStore.list(day, 5); } catch (e) { G.dailyCache = []; }
+    $('daily-name').textContent = c.name; $('daily-desc').textContent = c.desc + ' \u00b7 +' + BP.fmt(CH_BONUS);
+    const top = G.dailyCache[0];
+    $('daily-best').textContent = top ? 'Best today: ' + top.name + ' ' + BP.fmt(top.score) : 'Nobody has finished it today. Be the first!';
+    $('board-daily-name').textContent = c.name;
+    const ol = $('daily-list'); ol.innerHTML = '';
+    if (!G.dailyCache.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No finishers yet today (' + G.dailyStore.label.toLowerCase() + ')'; ol.appendChild(li); }
+    G.dailyCache.forEach((e, i) => { const li = document.createElement('li'); if (highlight && e.name === highlight.name && e.score === highlight.score) li.className = 'me'; li.innerHTML = `<span class="rk">${i + 1}</span><span class="nm"></span><span class="tm">${fmtSecs(e.secs)}</span><span class="sc">${BP.fmt(e.score)}</span>`; li.querySelector('.nm').textContent = e.name; ol.appendChild(li); });
+  }
+  async function recordDaily(name) {
+    const p = G.dailyPending; G.dailyPending = null; if (!p) return null;
+    try { return await G.dailyStore.submit(p.day, name, p.score, p.secs); } catch (e) { return null; }
+  }
+  G.refreshDaily = refreshDaily;
   function showEntry() {
     setTimeout(() => {
       if (G.mode !== 'over') return;
-      hideAll(); $('entry-score').textContent = BP.fmt(G.score); $('entry').classList.remove('hidden');
+      hideAll(); $('entry-score').textContent = BP.fmt(G.score); $('entry').classList.remove('hidden'); $('entry-daily').classList.toggle('hidden', !G.dailyPending);
       const inp = $('entry-name'); inp.value = localStorage.getItem('beastPinball.lastName') || ''; if (!G.autoplay) inp.focus();
     }, 1500);
   }
   async function refreshScores(highlight) {
     try { G.scoreCache = await G.store.list(10); } catch (e) { G.scoreCache = []; }
+    refreshDaily(G.lastDaily);
     const ol = $('board-list'); ol.innerHTML = '';
     G.scoreCache.forEach((s, i) => { const li = document.createElement('li'); if (highlight && s.name === highlight.name && s.score === highlight.score) li.className = 'me'; li.innerHTML = `<span class="rk">${i + 1}</span><span class="nm"></span><span class="sc">${BP.fmt(s.score)}</span>`; li.querySelector('.nm').textContent = s.name; ol.appendChild(li); });
     $('board-mode').textContent = G.store.label === 'GLOBAL' ? 'GLOBAL LEADERBOARD' : 'HIGH SCORES (THIS DEVICE)';
@@ -1576,7 +1761,7 @@ window.BEAST_ASSETS = {
   async function submitEntry(e) {
     if (e) e.preventDefault();
     const name = BP.cleanName($('entry-name').value); localStorage.setItem('beastPinball.lastName', name);
-    const entry = await G.store.submit(name, G.score); G.lastEntry = entry;
+    const entry = await G.store.submit(name, G.score); G.lastEntry = entry; G.lastDaily = await recordDaily(name);
     await refreshScores(entry); hideAll(); $('board').classList.remove('hidden'); G.mode = 'attract';
   }
   G.submitEntry = submitEntry;
@@ -1587,7 +1772,7 @@ window.BEAST_ASSETS = {
     for (const b of document.querySelectorAll('[data-back]')) b.onclick = () => showStart();
     $('board-play').onclick = () => startGame();
     $('entry-form').onsubmit = submitEntry;
-    $('entry-skip').onclick = () => showStart();
+    $('entry-skip').onclick = async () => { G.lastDaily = await recordDaily(localStorage.getItem('beastPinball.lastName') || 'PLAYER'); showStart(); };
     $('btn-mute').onclick = () => { AU.setMuted(!AU.A.muted); $('btn-mute').textContent = AU.A.muted ? '🔇' : '🔊'; };
     $('btn-pause').onclick = () => togglePause();
     $('pause-resume').onclick = () => togglePause();
@@ -1646,7 +1831,11 @@ window.BEAST_ASSETS = {
   function safeStep() { try { if (G.mode === 'play') step(); } catch (err) { logErr(err); } }
   function frameFx(dt) {
     for (const t of Object.values(G.tables)) { for (const b of t.def.bumpers) b.flash = Math.max(0, (b.flash || 0) - dt * 4); for (const s of t.def.slings) s.seg.flash = Math.max(0, (s.seg.flash || 0) - dt * 5); if (t.def.core) t.def.core.flash = Math.max(0, (t.def.core.flash || 0) - dt * 3); }
-    for (const c of MD.chars) c.wob = Math.max(0, c.wob - dt * 1.8);
+    for (const c of MD.chars) { c.wob = Math.max(0, c.wob - dt * 1.8); c.hop = Math.max(0, (c.hop || 0) - dt * 1.6); }
+    // Eye Mood: calm (0) -> focused (1, 2X combo) -> frenzy (2, 3X+ combo); eases back after the combo window ends
+    const comboOn = G.mode === 'play' && G.lastShot > 0 && G.clock - G.lastShot < 4 && G.comboN >= 2;
+    const moodT = comboOn ? (G.comboN >= 3 ? 2 : 1) : 0;
+    G.eyeMood = moodT > G.eyeMood ? Math.min(moodT, G.eyeMood + dt * 4) : Math.max(moodT, G.eyeMood - dt * 0.8);
     G.giFlash = Math.max(0, (G.giFlash || 0) - dt * 1.5);
     if (G.nudgeOff) { G.nudgeOff = [G.nudgeOff[0] * 0.8, G.nudgeOff[1] * 0.8]; if (Math.abs(G.nudgeOff[0]) + Math.abs(G.nudgeOff[1]) < 0.1) G.nudgeOff = null; }
     const D = G.def();
@@ -1670,6 +1859,8 @@ window.BEAST_ASSETS = {
     setAutoplay(v) { G.autoplay = v; },
     simulate(seconds) { const n = Math.round(seconds / STEP); for (let i = 0; i < n; i++) { if (G.mode !== 'play') break; G.clock += STEP; safeStep(); if (G.msgs.length > 20) G.msgs.length = 1; } return G.stats; },
     setScore(n) { G.score = n; },
+    setDay(d) { G.dayOverride = d; if (G.ch) G.ch = newChallenge(); },
+    challenges: CHALLENGES, challengeFor, dayKey, wake,
   };
 
   // ---------- boot ----------

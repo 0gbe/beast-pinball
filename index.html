@@ -61,6 +61,20 @@ kbd { background: #2a1a3a; border: 1px solid #6a4a8a; border-radius: 4px; paddin
 label { display: block; opacity: .8; margin-bottom: 8px; font-size: 14px; }
 input#entry-name { width: 100%; font: 900 28px ui-monospace, "Courier New", monospace; text-align: center; text-transform: uppercase; letter-spacing: 3px;
   padding: 12px; border-radius: 12px; border: 2px solid #ff3d8b; background: #12061c; color: #ffd23a; outline: none; }
+.daily { margin: 0 auto 14px; padding: 8px 12px; max-width: 340px; border-radius: 12px; border: 1px solid rgba(61,255,158,.35);
+  background: rgba(61,255,158,.07); font-size: 13px; line-height: 1.3; }
+.daily .dl { font: 800 11px system-ui, Arial, sans-serif; letter-spacing: 2px; color: #3dff9e; }
+.daily .dn { font: 900 17px "Arial Black", Impact, sans-serif; color: #ffd23a; letter-spacing: 1px; margin-top: 2px; }
+.daily .dd { opacity: .9; font-weight: 700; font-size: 12px; }
+.daily .db { opacity: .7; font-size: 12px; margin-top: 2px; }
+.dh { margin: 10px 0 6px; font: 800 13px system-ui, Arial, sans-serif; letter-spacing: 1.5px; color: #3dff9e; }
+.board.mini { font-size: 14px; } .board.mini li { padding: 4px 10px; } .board.mini .tm { opacity: .6; font-size: 12px; align-self: center; }
+.board.mini li.empty { opacity: .6; justify-content: center; font: 600 13px system-ui, Arial, sans-serif; }
+.entry-daily { color: #3dff9e; font-weight: 800; font-size: 14px; margin: -4px 0 12px; }
+.entry-daily.hidden { display: none; }
+@media (max-height: 700px) { .crew { height: 84px; } .logo span { font-size: 52px; } .tag { margin: 8px 0 10px; } .daily { margin-bottom: 10px; padding: 6px 10px; } }
+@media (max-height: 600px) { .crew { height: 64px; } .logo { margin-top: 4px; } .logo span { font-size: 44px; } .logo em { font-size: 28px; } .by { font-size: 17px; margin-top: 5px; }
+  .tag { font-size: 13px; margin: 6px 0 8px; } .daily { margin-bottom: 8px; padding: 5px 10px; } .daily .dn { font-size: 15px; } button.big { padding: 11px 32px; } .panel { padding: 16px 16px; } }
 </style>
 </head>
 <body>
@@ -79,6 +93,12 @@ input#entry-name { width: 100%; font: 900 28px ui-monospace, "Courier New", mono
     <h1 class="logo" aria-label="Beast PinBall by Ogbe"><span>BEAST</span><em>PinBall</em></h1>
     <p class="by">by Ogbe</p>
     <p class="tag">Roll the eyeball. Light the toys. Teleport to the Void.</p>
+    <div id="daily" class="daily" aria-live="polite">
+      <div class="dl">TODAY'S CHALLENGE</div>
+      <div class="dn" id="daily-name"></div>
+      <div class="dd" id="daily-desc"></div>
+      <div class="db" id="daily-best"></div>
+    </div>
     <button id="btn-play" class="big">PLAY</button>
     <div class="row"><button id="btn-scores">HIGH SCORES</button><button id="btn-help">HOW TO PLAY</button></div>
   </div>
@@ -101,6 +121,9 @@ input#entry-name { width: 100%; font: 900 28px ui-monospace, "Courier New", mono
       <li><b>Drop targets:</b> knock all three to light a <b>Mission</b> at the scoop. Finish all four for <b>Beast Mode</b>.</li>
       <li><b>Combos:</b> chain ramps and the left orbit within 4 seconds.</li>
       <li><b>The Void:</b> reach 250,000 and you get teleported to the bonus table for 19 seconds. Then it's 1M, 2.5M, 5M…</li>
+      <li><b>Wake the Beasts:</b> each toy wakes up when you hit it or the shot next to it (Hypno: left orbit, Brim: right ramp, Hood and Racc: their inlanes). Wake all four for a <b>Beast Party</b> jackpot.</li>
+      <li><b>Eye Mood:</b> the eyeball gets focused on a 2X combo and goes into a red frenzy at 3X.</li>
+      <li><b>Today's Challenge:</b> a new goal every day. Finish it for a bonus and a spot on today's board.</li>
       <li>Kickback in the left outlane, ball save at the start of every ball.</li>
     </ul>
     <button data-back>BACK</button>
@@ -111,6 +134,8 @@ input#entry-name { width: 100%; font: 900 28px ui-monospace, "Courier New", mono
   <div class="panel">
     <h2 id="board-mode">HIGH SCORES</h2>
     <ol id="board-list" class="board"></ol>
+    <h3 class="dh">TODAY'S CHALLENGE: <span id="board-daily-name"></span></h3>
+    <ol id="daily-list" class="board mini"></ol>
     <div class="row"><button id="board-play" class="big">PLAY</button><button data-back>MENU</button></div>
   </div>
 </section>
@@ -119,6 +144,7 @@ input#entry-name { width: 100%; font: 900 28px ui-monospace, "Courier New", mono
   <form id="entry-form" class="panel" autocomplete="off">
     <h2>GAME OVER</h2>
     <p class="final" id="entry-score">0</p>
+    <p class="entry-daily hidden" id="entry-daily">Daily challenge complete! You'll go on today's board too.</p>
     <label for="entry-name">Enter your name for the high score list</label>
     <input id="entry-name" maxlength="12" placeholder="YOUR NAME" autocapitalize="characters" spellcheck="false">
     <div class="row"><button type="submit" class="big" id="entry-save">SAVE SCORE</button><button type="button" id="entry-skip">SKIP</button></div>

@@ -15,6 +15,8 @@ The game is a static site (GitHub Pages). Scores are stored by the high score ad
 4. Dashboard → **Connect** (or Project Settings → API Keys) → copy the **Project URL** and the
    **Publishable key** (`sb_publishable_…`). Never use the `sb_secret_…` key in the game.
 5. Paste them into `js/config.js`, commit, push. Done.
+6. Optional: for a global *Today's Challenge* board too, the same SQL creates `daily_scores`; set
+   `dailyTable: 'daily_scores'` in `js/config.js`. Leave it empty to keep that board per device.
 
 Notes
 * Free projects pause after ~7 days with little database activity; a few games a day keeps it
