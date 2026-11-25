@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.3 — 2026-11-25
+* The Void: a soft tick plays once per second during the last 5 seconds of the countdown (5, 4, 3, 2, 1).
+
 ## v1.2 — 2026-11-23
 * Removed the art credits that named Ogbe as the artist (title screen, playfield apron, dot-matrix attract page, page description, README). The game credit "by Ogbe" stays.
 

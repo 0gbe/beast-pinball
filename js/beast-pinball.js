@@ -1323,7 +1323,7 @@ window.BEAST_ASSETS = {
     G.stats.bonusEntered++; G.bonusCount++; G.nextBonusAt = nextLadder(G.bonusCount);
     teleport('TELEPORT!', b.x, b.y, () => {
       G.tables.main.world.balls = [];
-      G.tableName = 'bonus'; G.bonusLeft = G.bonusDuration;
+      G.tableName = 'bonus'; G.bonusLeft = G.bonusDuration; G.voidTickSec = 0;
       for (const e of G.tables.bonus.def.eyes) { e.alive = true; e.respawn = 0; }
       G.tables.bonus.world.balls = []; serveBonusBall();
       for (const f of Object.values(G.tables.bonus.def.flippers)) f.enabled = !G.tilted;
@@ -1422,6 +1422,9 @@ window.BEAST_ASSETS = {
       if (G.mode === 'play' && !G.endBallAt && G.score >= G.nextBonusAt && act.length === 1 && G.serveQueue === 0 && act[0].state === 'play' && !inLane(act[0]) && act[0].y < 900 && !G.tilted) enterBonus(act[0]);
     } else {
       G.bonusLeft -= STEP;
+      // soft tick once per second for the last 5 seconds (5,4,3,2,1), in sync with the displayed number
+      const sec = Math.ceil(G.bonusLeft);
+      if (sec >= 1 && sec <= 5 && sec !== G.voidTickSec) { G.voidTickSec = sec; AU.play('tick'); }
       for (const e of D.eyes) if (!e.alive && G.gameTime >= e.respawn) e.alive = true;
       if (G.bonusLeft <= 0 && !G.trans) { G.bonusLeft = 0; exitBonus(); }
     }

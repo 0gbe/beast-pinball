@@ -86,3 +86,6 @@ Pages on a project repo). The game lives in the folder `beast-pinball/` of that 
    Updating existing files with push_files needs no SHAs.
 5. Optional mirror: same files (no prefix) to **0gbe/beast-pinball** (source mirror; Pages is NOT enabled there).
 6. Poll https://0gbe.github.io/beast-pinball/ until it serves the new version (Pages builds take ~1-2 min).
+
+## Suggested ideas
+* 2026-11-24: Soft "tick" (existing audio tick sound, currently unused) once per second during the last 5 seconds of The Void countdown, synced with the red flashing number. Status: approved by Ogbe 2026-11-25, built in v1.3.
