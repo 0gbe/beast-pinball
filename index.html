@@ -75,6 +75,7 @@ input#entry-name { width: 100%; font: 900 28px ui-monospace, "Courier New", mono
 @media (max-height: 700px) { .crew { height: 84px; } .logo span { font-size: 52px; } .tag { margin: 8px 0 10px; } .daily { margin-bottom: 10px; padding: 6px 10px; } }
 @media (max-height: 600px) { .crew { height: 64px; } .logo { margin-top: 4px; } .logo span { font-size: 44px; } .logo em { font-size: 28px; } .by { font-size: 17px; margin-top: 5px; }
   .tag { font-size: 13px; margin: 6px 0 8px; } .daily { margin-bottom: 8px; padding: 5px 10px; } .daily .dn { font-size: 15px; } button.big { padding: 11px 32px; } .panel { padding: 16px 16px; } }
+button.share { background: linear-gradient(180deg, #1d2a3a, #0b1018); border-color: rgba(54,224,255,.5); }
 </style>
 </head>
 <body>
@@ -147,7 +148,7 @@ input#entry-name { width: 100%; font: 900 28px ui-monospace, "Courier New", mono
     <p class="entry-daily hidden" id="entry-daily">Daily challenge complete! You'll go on today's board too.</p>
     <label for="entry-name">Enter your name for the high score list</label>
     <input id="entry-name" maxlength="12" placeholder="YOUR NAME" autocapitalize="characters" spellcheck="false">
-    <div class="row"><button type="submit" class="big" id="entry-save">SAVE SCORE</button><button type="button" id="entry-skip">SKIP</button></div>
+    <div class="row"><button type="submit" class="big" id="entry-save">SAVE SCORE</button><button type="button" id="entry-skip">SKIP</button><button type="button" id="entry-share" class="share" title="Share your score on X">SHARE ON X</button></div>
   </form>
 </section>
 

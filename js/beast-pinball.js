@@ -591,6 +591,8 @@ window.BEAST_ASSETS = {
     extra: () => { [659, 784, 988, 1319, 988, 1319].forEach((f, i) => tone('square', f, 0, 0.12, 0.13, null, i * 0.1)); },
     start: () => { [262, 330, 392, 523, 659, 784].forEach((f, i) => tone('square', f, 0, 0.14, 0.12, null, i * 0.07)); },
     tick: () => { tone('square', 1800, 0, 0.03, 0.1); },
+    // Heartbeat Drain: a soft low lub-dub
+    heartbeat: () => { tone('sine', 72, 42, 0.12, 0.32); tone('sine', 64, 38, 0.14, 0.22, null, 0.17); },
     // Beast Party drum hit: kick + snare + a short crash
     drum: () => { tone('sine', 160, 42, 0.28, 0.9); noise(0.16, 0.45, 1800, 0.9); tone('triangle', 190, 120, 0.1, 0.25); tone('sine', 150, 42, 0.24, 0.7, null, 0.14); noise(0.7, 0.18, 7000, 0.6, 'highpass', 0.14); },
   };
@@ -1069,6 +1071,14 @@ window.BEAST_ASSETS = {
     // inserts
     for (const ins of G.inserts[which]) insertShape(ctx, ins, ins.lit(t), t);
     // GI flash overlay
+    // Heartbeat Drain: dim red pulse along the table edges
+    if (G.heartPulse > 0.01) {
+      ctx.save(); const a = 0.3 * G.heartPulse, E = 46;
+      for (const [x0, y0, x1, y1, rx, ry, rw, rh] of [[0, 0, E, 0, 0, 0, E, 1000], [600, 0, 600 - E, 0, 600 - E, 0, E, 1000], [0, 1000, 0, 1000 - E, 0, 1000 - E, 600, E], [0, 0, 0, E, 0, 0, 600, E]]) {
+        const g = ctx.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, `rgba(190,0,20,${a})`); g.addColorStop(1, 'rgba(190,0,20,0)'); ctx.fillStyle = g; ctx.fillRect(rx, ry, rw, rh);
+      }
+      ctx.restore();
+    }
     if (G.giFlash > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(${G.giColor || '255,255,255'},${G.giFlash * 0.25})`; ctx.fillRect(0, 0, 600, 1000); ctx.restore(); }
     if (!bonus) {
       // top lanes rollover lights
@@ -1199,9 +1209,9 @@ window.BEAST_ASSETS = {
   const G = window.G = {
     mode: 'attract', tableName: 'main', clock: 0, gameTime: 0, paused: false,
     score: 0, ballNum: 1, ballsPerGame: 3, extraBalls: 0,
-    stats: { stuckNudges: 0, ejects: 0, oob: 0, drains: 0, bonusEntered: 0, bonusExited: 0, errors: [], rampsMade: 0, saves: 0, multiballs: 0, missionsStarted: 0, kickbacks: 0, games: 0, wakes: 0, parties: 0, challengesDone: 0 },
+    stats: { stuckNudges: 0, ejects: 0, oob: 0, drains: 0, bonusEntered: 0, bonusExited: 0, errors: [], rampsMade: 0, saves: 0, multiballs: 0, missionsStarted: 0, kickbacks: 0, games: 0, wakes: 0, parties: 0, challengesDone: 0, heartbeats: 0 },
     dmd: new BP.DMD(), msgs: [], autoplay: false, keys: {}, input: { L: false, R: false, plunger: false },
-    plungerPower: 0, coreEye: new BP.Ball(0, 0), scoreCache: [], store: BP.makeScoreStore(), dailyStore: BP.makeDailyStore(), dailyCache: [], eyeMood: 0,
+    plungerPower: 0, coreEye: new BP.Ball(0, 0), scoreCache: [], store: BP.makeScoreStore(), dailyStore: BP.makeDailyStore(), dailyCache: [], eyeMood: 0, heartPulse: 0, heartAt: -9, heartDanger: false,
   };
   const ev = (name, ...a) => { if (G.log && name !== 'scoop') G.log.push(name + (typeof a[0] === 'string' ? a[0] : '')); const h = H[name]; if (h && G.mode === 'play') h(...a); };
   G.tables = { main: BP.buildMain(ev), bonus: BP.buildBonus(ev) };
@@ -1458,7 +1468,7 @@ window.BEAST_ASSETS = {
     if (G.savePending) { G.savePending = false; G.ballSaveUntil = Math.max(G.ballSaveUntil, G.gameTime + 8); }
   }
   function drain(b) {
-    b.state = 'dead'; const w = G.world(); w.balls = w.balls.filter(x => x !== b);
+    b.state = 'dead'; const w = G.world(); w.balls = w.balls.filter(x => x !== b); if (!w.balls.some(fearful)) heartStop();
     if (G.tableName === 'bonus') { serveBonusBall(); return; }
     G.stats.drains++;
     const left = w.balls.length + G.serveQueue;
@@ -1592,6 +1602,7 @@ window.BEAST_ASSETS = {
       if (G.bonusLeft <= 0 && !G.trans) { G.bonusLeft = 0; exitBonus(); }
     }
     if (G.partyUntil && G.gameTime >= G.partyUntil) endParty();
+    heartbeat(W);
     chEvent('score', G.score);
     G.tiltMeter = Math.max(0, G.tiltMeter - STEP * 0.55);
     if (G.skillActive && G.gameTime > 1 && !waitingInLane() && G.balls().every(b => !inLane(b) || b.y < 300)) { /* still traveling */ }
@@ -1605,6 +1616,14 @@ window.BEAST_ASSETS = {
     }
     if (G.autoplay) autoplay();
   }
+  // Heartbeat Drain: same moment the pupil shrinks in fear (ball low and falling fast toward the drain)
+  const fearful = b => b.state === 'play' && b.y > 900 && b.vy > 300 && !inLane(b);
+  function heartbeat(W) {
+    const danger = G.mode === 'play' && !G.trans && W.balls.some(fearful);
+    if (danger && G.gameTime - G.heartAt >= 0.9) { G.heartAt = G.gameTime; G.heartPulse = 1; G.stats.heartbeats++; AU.play('heartbeat'); } // at most one beat per 0.9 s
+    G.heartDanger = danger;
+  }
+  function heartStop() { G.heartDanger = false; G.heartPulse = 0; }
   function rampMade(id, b) {
     if (G.log) G.log.push('RAMP' + id);
     G.ballStats.ramps++; G.stats.rampsMade++; G.rampCount++;
@@ -1672,7 +1691,7 @@ window.BEAST_ASSETS = {
     hideAll(); startBall(); AU.play('start'); AU.startMusic('main'); AU.callout('Beast pinball');
   }
   function gameOver() {
-    G.mode = 'over'; G.input = { L: false, R: false, plunger: false };
+    G.mode = 'over'; G.input = { L: false, R: false, plunger: false }; heartStop();
     for (const t of Object.values(G.tables)) t.world.balls = [];
     G.tableName = 'main'; G.msg('GAME OVER', BP.fmt(G.score), 4, { now: true }); AU.stopMusic(); endParty();
     G.dailyPending = G.ch && G.ch.done ? { day: G.ch.day, score: G.score, secs: G.ch.secs } : null;
@@ -1744,6 +1763,24 @@ window.BEAST_ASSETS = {
     try { return await G.dailyStore.submit(p.day, name, p.score, p.secs); } catch (e) { return null; }
   }
   G.refreshDaily = refreshDaily;
+  // ---------- Share Your Score ----------
+  const GAME_URL = 'https://0gbe.github.io/beast-pinball/';
+  const titleCase = s => s.toLowerCase().replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+  function shareText() {
+    const c = G.ch, name = c ? titleCase(c.def.name) : '';
+    const daily = !c ? '' : c.done ? ` and beat today's challenge, ${name}!` : `. Today's challenge, ${name}, got away this time.`;
+    return `I scored ${BP.fmt(G.score)} on Beast PinBall by @_0gbe${daily} Can you beat it?`;
+  }
+  const shareIntent = () => 'https://x.com/intent/post?text=' + encodeURIComponent(shareText()) + '&url=' + encodeURIComponent(GAME_URL);
+  async function shareScore() {
+    const text = shareText(), coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+    if (coarse && navigator.share) {
+      try { await navigator.share({ title: 'Beast PinBall', text, url: GAME_URL }); G.lastShare = 'native'; return; }
+      catch (e) { if (e && e.name === 'AbortError') { G.lastShare = 'cancelled'; return; } } // cancelled = done; other errors fall back
+    }
+    window.open(shareIntent(), '_blank', 'noopener'); G.lastShare = 'intent';
+  }
+  G.shareText = shareText; G.shareIntent = shareIntent;
   function showEntry() {
     setTimeout(() => {
       if (G.mode !== 'over') return;
@@ -1772,6 +1809,7 @@ window.BEAST_ASSETS = {
     for (const b of document.querySelectorAll('[data-back]')) b.onclick = () => showStart();
     $('board-play').onclick = () => startGame();
     $('entry-form').onsubmit = submitEntry;
+    $('entry-share').onclick = e => { e.preventDefault(); shareScore(); };
     $('entry-skip').onclick = async () => { G.lastDaily = await recordDaily(localStorage.getItem('beastPinball.lastName') || 'PLAYER'); showStart(); };
     $('btn-mute').onclick = () => { AU.setMuted(!AU.A.muted); $('btn-mute').textContent = AU.A.muted ? '🔇' : '🔊'; };
     $('btn-pause').onclick = () => togglePause();
@@ -1786,9 +1824,12 @@ window.BEAST_ASSETS = {
 
   // ---------- input ----------
   const typing = () => document.activeElement && document.activeElement.tagName === 'INPUT';
+  // a focused button on an open menu (e.g. SHARE) keeps its native Enter/Space activation
+  const menuButton = () => { const a = document.activeElement; return a && a.tagName === 'BUTTON' && a.closest('.overlay:not(.hidden)'); };
   function key(e, down) {
     if (typing()) return;
-    const c = e.code; let used = true;
+    const c = e.code;
+    if ((c === 'Space' || c === 'Enter') && menuButton()) return; let used = true;
     if (c === 'KeyZ' || c === 'ShiftLeft' || c === 'ArrowLeft') G.input.L = down;
     else if (c === 'Slash' || c === 'ShiftRight' || c === 'ArrowRight') G.input.R = down;
     else if (c === 'Space' || c === 'Enter' || c === 'ArrowDown') {
@@ -1831,6 +1872,7 @@ window.BEAST_ASSETS = {
   function safeStep() { try { if (G.mode === 'play') step(); } catch (err) { logErr(err); } }
   function frameFx(dt) {
     for (const t of Object.values(G.tables)) { for (const b of t.def.bumpers) b.flash = Math.max(0, (b.flash || 0) - dt * 4); for (const s of t.def.slings) s.seg.flash = Math.max(0, (s.seg.flash || 0) - dt * 5); if (t.def.core) t.def.core.flash = Math.max(0, (t.def.core.flash || 0) - dt * 3); }
+    G.heartPulse = G.paused || G.mode !== 'play' ? 0 : Math.max(0, G.heartPulse - dt * (G.heartDanger ? 1.6 : 4)); // fades fast once the ball is saved
     for (const c of MD.chars) { c.wob = Math.max(0, c.wob - dt * 1.8); c.hop = Math.max(0, (c.hop || 0) - dt * 1.6); }
     // Eye Mood: calm (0) -> focused (1, 2X combo) -> frenzy (2, 3X+ combo); eases back after the combo window ends
     const comboOn = G.mode === 'play' && G.lastShot > 0 && G.clock - G.lastShot < 4 && G.comboN >= 2;

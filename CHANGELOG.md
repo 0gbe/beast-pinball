@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.5 — 2026-11-25
+* Heartbeat Drain: when the ball heads for the drain (the moment the eyeball's pupil shrinks in fear), a soft synthesized heartbeat plays and the table edges pulse a dim red. At most one beat every 0.9 s. It fades out quickly when the ball is saved, and stops when it drains, on pause and at game over. The plunger lane never triggers it.
+* Share Your Score: a SHARE ON X button on the game-over screen opens a ready-to-post X message (x.com/intent/post) with your score, today's challenge name and whether you beat it, and the game link. Phones use the system share sheet when available and fall back to the X link. Works with mouse, touch and keyboard (Enter/Space on the button) and doesn't touch the name entry or the high score list.
 ## v1.4 — 2026-11-25
 * Eye Mood: the eyeball's iris follows your combo streak. Calm (the classic look) normally, a focused electric-blue iris on a 2X combo, and a bloodshot red "frenzy" glow at 3X and up. It eases back to calm a couple of seconds after the combo ends.
 * Beast Wake-Up: each of the 4 toys on the main table wakes up (glows, brightens and hops) when you hit it or the shot right next to it: Hypno = left orbit, Brim = right ramp, Hood = left inlane, Racc = right inlane. Wake all 4 for a BEAST PARTY: dot-matrix callout, synthesized drum hit, 75,000 (+25,000 for each further party in a game, up to 200,000). The toys go back to sleep after the party and at the start of every ball.

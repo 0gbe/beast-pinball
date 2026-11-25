@@ -73,6 +73,10 @@ Recommended backend: Supabase free tier (sign in with GitHub). See backend/READM
 * Beast Wake-Up: `G.beastsAwake[4]` is separate from the multiball `charsLit`. Triggers: toy hit, or HYPNO = left orbit (upward spinner shot), BRIM = right ramp, HOOD = left inlane, RACC = right inlane. Party = 75K + 25K per extra party (cap 200K), 2.5 s, then reset; reset each ball.
 * Daily Challenge: `challengeFor(day)` = FNV hash of the Puerto Rico date into the 10-goal pool, never the same goal two days running. Board: localStorage `beastPinball.daily.v1` (last 14 days); optional Supabase table `daily_scores` when `dailyTable` is set in config.js. Achievability is checked with `tests/daily-tune.mjs` (autoplay completion rates).
 
+## v1.5 features (how they work)
+* Heartbeat Drain: `heartbeat()` runs each step; danger = any ball in play with y > 900, vy > 300, not in the plunger lane (the same test as the scared pupil). One `heartbeat` SFX per 0.9 s at most; `G.heartPulse` drives a dim red edge gradient and fades at 4/s once the danger ends. It is cleared on drain, pause and game over.
+* Share Your Score: `shareText()` = "I scored N on Beast PinBall by @_0gbe" + today's challenge result + "Can you beat it?" (game credit only; never an art credit). Desktop opens `https://x.com/intent/post?text=…&url=https://0gbe.github.io/beast-pinball/`. Coarse-pointer devices try `navigator.share` first (a cancel counts as done) and fall back to the intent URL. Focused overlay buttons keep native Enter/Space.
+
 ## Publishing (text-only repo)
 **Live game:** https://0gbe.github.io/beast-pinball/ served by the GitHub *user site* repo **0gbe/0gbe.github.io**
 (GitHub Pages publishes user-site repos from `main` automatically; the user can't sign in on the web to enable
@@ -99,3 +103,8 @@ Pages on a project repo). The game lives in the folder `beast-pinball/` of that 
 * 2026-11-25: Beast Wake-Up: hitting each of the 4 small characters lights them up; light all 4 for a short "Beast Party" jackpot with a drum hit. Status: approved by Ogbe 2026-11-25, built in v1.4.
 * 2026-11-25: Daily Challenge: one seeded goal per day (e.g. 3 ramps in 20s) with its own mini leaderboard. Status: approved by Ogbe 2026-11-25, built in v1.4.
 * 2026-11-25: Ghost Replay: a faint ghost eyeball replays the top high score's last ball on the attract screen. Status: passed (not chosen by Ogbe, 2026-11-25).
+* 2026-11-25: Stare-Down Hurry-Up: knocking down all 3 drop targets starts a 150K value counting down on the DMD; shoot the eye scoop before it runs out to collect what's left. Status: passed (not chosen by Ogbe, 2026-11-25).
+* 2026-11-25: Dizzy Eye: a big spinner rip (e.g. 20+ spins) makes the eyeball's iris swirl dizzily for a few seconds, and the next shot scores a "Dizzy" bonus. Status: passed (not chosen by Ogbe, 2026-11-25).
+* 2026-11-25: Heartbeat Drain: when the ball heads for the drain (the existing "scared" pupil moment), a soft heartbeat thump plays and the table edges pulse dim red. Status: approved by Ogbe 2026-11-25, built in v1.5.
+* 2026-11-25: Share Your Score: a Share button on game over opens a ready-to-post X message with the score, today's challenge result and the game link. Status: approved by Ogbe 2026-11-25, built in v1.5.
+* 2026-11-25: Secret Beanie Code: a hidden flipper code on the title screen (e.g. L L R R L R) gives the eyeball a tiny green beanie for that game, a nod to Ogbe's own BEAST. Status: passed (not chosen by Ogbe, 2026-11-25).
