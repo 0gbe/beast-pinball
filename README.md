@@ -16,7 +16,7 @@ A browser pinball game by **Ogbe**, starring the vinyl-toy crew and an eyeball f
 index.html (page + styles)
 js/beast-pinball.js  the whole game in one file, sections in this order:
   assets-data (sprites as data URIs), physics (960 Hz collisions), tables, eyeball,
-  dmd (dot-matrix), audio (Web Audio synth), scores (high score adapters), render, game
+  dmd (dot-matrix), sounds-data (the original sound set, base64 Opus + MP3), audio (Web Audio engine), scores (high score adapters), render, game
 js/config.js         leaderboard config (Supabase URL + publishable key)
 backend/             Supabase SQL + setup guide;  NOTES.md design notes;  CHANGELOG.md
 ```
