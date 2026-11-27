@@ -75,6 +75,9 @@ input#entry-name { width: 100%; font: 900 28px ui-monospace, "Courier New", mono
 .board.mini li.empty { opacity: .6; justify-content: center; font: 600 13px system-ui, Arial, sans-serif; }
 .entry-daily { color: #3dff9e; font-weight: 800; font-size: 14px; margin: -4px 0 12px; }
 .entry-daily.hidden { display: none; }
+.rival { margin: -6px auto 10px; display: table; padding: 3px 12px; font: italic 900 14px/1.25 "Arial Black", Arial, sans-serif; letter-spacing: 0.5px; text-transform: uppercase; color: #00C8FF; border: 2px solid rgba(0,200,255,0.75); border-radius: 999px; background: rgba(0,200,255,0.08); text-shadow: 0 0 6px rgba(0,200,255,0.6); max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rival.top { color: #D4FF00; border-color: rgba(212,255,0,0.8); background: rgba(212,255,0,0.08); text-shadow: 0 0 8px rgba(212,255,0,0.7); }
+.rival.hidden { display: none; }
 @media (max-height: 700px) { .crew { height: 84px; } .logo span { font-size: 52px; } .tag { margin: 8px 0 10px; } .daily { margin-bottom: 10px; padding: 6px 10px; } }
 @media (max-height: 600px) { .crew { height: 64px; } .logo { margin-top: 4px; } .logo span { font-size: 44px; } .logo em { font-size: 28px; } .by { font-size: 17px; margin-top: 5px; }
   .tag { font-size: 13px; margin: 6px 0 8px; } .daily { margin-bottom: 8px; padding: 5px 10px; } .daily .dn { font-size: 15px; } button.big { padding: 11px 32px; } .panel { padding: 16px 16px; } }
@@ -148,6 +151,7 @@ button.share { background: linear-gradient(180deg, #1d2a3a, #0b1018); border-col
   <form id="entry-form" class="panel" autocomplete="off">
     <h2>GAME OVER</h2>
     <p class="final" id="entry-score">0</p>
+    <p class="rival hidden" id="entry-rival" aria-live="polite"></p>
     <p class="entry-daily hidden" id="entry-daily">Daily challenge complete! You'll go on today's board too.</p>
     <label for="entry-name">Enter your name for the high score list</label>
     <input id="entry-name" maxlength="12" placeholder="YOUR NAME" autocapitalize="characters" spellcheck="false">
