@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.8.1 — 2026-11-27 (readable eyelids)
+Ogbe's note: the eyelid has to be obvious, and only during the Sleepy Eye / wink moments.
+* New eyelid for Sleepy Eye and the Millionaire Wink: a hot-pink shaded upper lid dome lit from the top-left like the ball, a soft shadow under it, a light crease, a thick dark lash line with little lashes, a dark outline against the table, and a small lower lid that squeezes up. The old near-black lids blended into the dark table and scoop at real ball size; the new one reads from across the screen.
+* Sleepy Eye: the heavy lid droops half-way across the iris (the drowsy eye now drifts to look down/ahead so the lid sits over it) and snaps open and disappears on WAKE UP!.
+* Millionaire Wink: the tilted lid sweeps fully shut into a smile-curved seam with lashes and opens again over 0.85 s (was 0.8 s), then disappears.
+* At every other moment no eyelid is drawn at all: the eyeball is pixel-identical to v1.7 (checked by the Eye Mood pixel test and new in-game eyelid-pixel tests).
+
 ## v1.8 — 2026-11-27 (Sleepy Eye, Neon Sputter, Next Rival, Millionaire Wink)
 Four of today's ideas, approved by Ogbe. Physics, collision geometry, scoring rules, the v1.7 painted playfields, street-art HUD, the 4 small AKCB toys, the 19-second Void with its countdown ticks and the v1.6 sound mix are unchanged.
 * Sleepy Eye: cradle the eyeball on a raised flipper for 8 seconds and its eyelids slowly droop (about 2.4 s to half-closed). The next flip (the other flipper, or re-flipping within half a second of letting it roll) snaps it wide awake with a "WAKE UP!" callout, a bright pluck and +10,000 (doubled like everything else in 2X modes and The Void). It resets with no bonus if the ball rolls away, drains, the game is paused or tilted. The normal awake eye is pixel-identical to before.

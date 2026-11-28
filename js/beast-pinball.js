@@ -477,27 +477,6 @@ window.BEAST_ASSETS = {
       ctx.beginPath(); ctx.ellipse(x, y - r - r * 0.2 + lid, r * 1.2, r, 0, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(x, y + r + r * 0.2 - lid, r * 1.2, r, 0, 0, Math.PI * 2); ctx.fill();
     }
-    // v1.8 Sleepy Eye: heavy upper lid droops over the eye (opts.droop 0..1); only drawn when > 0, so the awake eye is unchanged
-    if (opts.droop > 0.002) {
-      const k = Math.min(1, opts.droop), up = y - r + r * 1.02 * k, lo = y + r - r * 0.2 * k; // lid edges
-      ctx.fillStyle = '#1a1620';
-      ctx.beginPath(); ctx.ellipse(x, up - r * 1.1, r * 1.3, r * 1.1, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(x, lo + r, r * 1.3, r, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = `rgba(255,170,205,${0.85 * k})`; ctx.lineWidth = Math.max(1, r / 7); ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.ellipse(x, up - r * 1.1, r * 1.3, r * 1.1, 0, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
-    }
-    // v1.8 Millionaire Wink: one tilted upper lid sweeps shut and back (opts.wink 0..1), the lower lid lifts into a smile squint
-    if (opts.wink > 0.002) {
-      const k = Math.min(1, opts.wink), up = -r + r * 1.3 * k, lo = r - r * 0.78 * k;
-      ctx.save(); ctx.translate(x, y); ctx.rotate(-0.3); ctx.fillStyle = '#1a1620';
-      ctx.beginPath(); ctx.ellipse(0, up - r * 1.15, r * 1.6, r * 1.15, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(0, lo + r * 1.1, r * 1.6, r * 1.1, 0, 0, Math.PI * 2); ctx.fill();
-      // the closed-eye "smile" lash line + three little lashes
-      ctx.strokeStyle = `rgba(255,190,215,${Math.min(1, 1.3 * k)})`; ctx.lineWidth = Math.max(1.1, r / 6); ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.ellipse(0, up - r * 1.15, r * 1.6, r * 1.15, 0, 0.27 * Math.PI, 0.73 * Math.PI); ctx.stroke();
-      if (k > 0.7) { ctx.lineWidth = Math.max(0.8, r / 10); for (const a of [-0.4, 0, 0.4]) { const ex = Math.sin(a) * r * 1.6, ey = up - r * 1.15 + Math.cos(a) * r * 1.15; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + Math.sin(a) * r * 0.16, ey + r * 0.15); ctx.stroke(); } }
-      ctx.restore();
-    }
     ctx.restore();
     // rim + glints (fixed light from top-left)
     ctx.strokeStyle = 'rgba(80,10,20,0.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r - 0.5, 0, Math.PI * 2); ctx.stroke();
@@ -505,6 +484,44 @@ window.BEAST_ASSETS = {
     ctx.beginPath(); ctx.ellipse(x - r * 0.38, y - r * 0.42, r * 0.22, r * 0.14, -0.6, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.beginPath(); ctx.arc(x + r * 0.3, y + r * 0.38, r * 0.08, 0, Math.PI * 2); ctx.fill();
+    // v1.8.1 eyelids: drawn ONLY while Sleepy Eye droops or the Millionaire Wink plays; otherwise nothing at all
+    if (opts.droop > 0.002) drawLids(ctx, x, y, r, Math.min(1, opts.droop), false);
+    if (opts.wink > 0.002) drawLids(ctx, x, y, r, Math.min(1, opts.wink), true);
+  }
+  // Shaded upper lid dome (+ a smaller lower lid) with a thick dark lash seam, lit from the top-left like the ball.
+  // sleepy: heavy lid droops to half-way across the iris; wink: tilted lid sweeps fully shut into a smile curve.
+  const LID = { hi: '#ff8fc8', mid: '#e0408a', lo: '#7a1446', lash: '#16060e' };
+  function drawLids(ctx, x, y, r, k, wink) {
+    BP.lidDraws = (BP.lidDraws || 0) + 1; // test hook: proves no lid is ever drawn in normal play
+    const R1 = r * 1.07, bulge = r * 0.3, N = 14;
+    const up = wink ? -r * 1.2 + r * 1.32 * k : -r * 1.2 + r * 0.95 * k;    // top of the upper-lid edge curve
+    const lo = wink ? r * 1.2 - r * 0.85 * k : r * 1.2 - r * 0.34 * k;      // bottom-lid edge
+    const edgeU = u => up + bulge * (1 - u * u), edgeL = u => lo - r * 0.12 * (1 - u * u);
+    ctx.save(); ctx.translate(x, y); if (wink) ctx.rotate(-0.26 * k);
+    ctx.beginPath(); ctx.arc(0, 0, R1, 0, Math.PI * 2); ctx.clip();
+    const fillLid = (top) => {
+      const g = ctx.createRadialGradient(-r * 0.45, -r * 0.55 * (top ? 1 : -1), r * 0.1, 0, 0, R1 * 1.15);
+      g.addColorStop(0, LID.hi); g.addColorStop(0.5, LID.mid); g.addColorStop(1, LID.lo); ctx.fillStyle = g; ctx.fill();
+    };
+    // lower lid (squeezes up a little)
+    ctx.beginPath(); ctx.moveTo(-R1 - 2, R1 + 2); for (let i = 0; i <= N; i++) { const u = -1 + 2 * i / N; ctx.lineTo(u * R1, edgeL(u)); } ctx.lineTo(R1 + 2, R1 + 2); ctx.closePath(); fillLid(false);
+    ctx.strokeStyle = LID.lash; ctx.lineWidth = Math.max(1.2, r * 0.13); ctx.beginPath(); for (let i = 0; i <= N; i++) { const u = -1 + 2 * i / N; ctx.lineTo(u * R1, edgeL(u)); } ctx.stroke();
+    // upper lid dome
+    const upper = () => { ctx.beginPath(); ctx.moveTo(-R1 - 2, -R1 - 2); ctx.lineTo(R1 + 2, -R1 - 2); for (let i = N; i >= 0; i--) { const u = -1 + 2 * i / N; ctx.lineTo(u * R1, edgeU(u)); } ctx.closePath(); };
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = r * 0.35; ctx.shadowOffsetY = r * 0.12; upper(); fillLid(true); ctx.restore();
+    // crease highlight just above the lash line (3D lid thickness)
+    ctx.strokeStyle = 'rgba(255,215,235,0.75)'; ctx.lineWidth = Math.max(0.8, r * 0.08); ctx.beginPath();
+    for (let i = 2; i <= N - 2; i++) { const u = -1 + 2 * i / N; ctx.lineTo(u * R1 * 0.9, edgeU(u) - r * 0.2); } ctx.stroke();
+    // crisp dark lash line / blink seam
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = LID.lash; ctx.lineWidth = Math.max(1.6, r * 0.2);
+    ctx.beginPath(); for (let i = 0; i <= N; i++) { const u = -1 + 2 * i / N; ctx.lineTo(u * R1, edgeU(u)); } ctx.stroke();
+    // lashes (pointing down/out) once the lid is well over the eye
+    if (k > 0.45) { ctx.lineWidth = Math.max(1, r * 0.1); for (const u of [-0.55, -0.18, 0.18, 0.55]) { const ex = u * R1, ey = edgeU(u); ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + u * r * 0.22, ey + r * 0.22 * k); ctx.stroke(); } }
+    ctx.restore();
+    // dark outline of the lid dome against the table so its silhouette reads from across the screen
+    ctx.save(); ctx.translate(x, y); if (wink) ctx.rotate(-0.26 * k);
+    const yTop = edgeU(0); if (yTop > -R1) { const a0 = Math.asin(Math.max(-1, Math.min(1, (up + bulge * 0) / R1))); ctx.strokeStyle = 'rgba(10,3,8,0.85)'; ctx.lineWidth = Math.max(1, r * 0.09); ctx.beginPath(); ctx.arc(0, 0, R1, Math.PI - a0, Math.PI * 2 + a0); ctx.stroke(); }
+    ctx.restore();
   }
   Object.assign(BP, { updateEye, hitEye, drawEye, moodColors, EYE_MOODS: MOODS });
 })();
@@ -2178,7 +2195,7 @@ window.BEAST_SOUNDS = {"opus":{"bank":"T2dnUwACAAAAAAAAAAA2IEX0AAAAAOrmoCYBE09wd
     G.msg('WAKE UP!', '+' + BP.fmt(v), 1.4, { now: true }); AU.play('wakeup'); R.popup(b.x, b.y - 24, '+' + BP.fmt(v), '#D4FF00'); R.particle(b.x, b.y, '#ffffff', 8, 160);
   }
   // ---------- v1.8: Millionaire Wink (once per game, purely visual) ----------
-  const WINK_AT = 1000000, WINK_DUR = 0.8;
+  const WINK_AT = 1000000, WINK_DUR = 0.85;
   function millionaireWink() { G.winked = true; G.wink = { t0: G.clock }; G.stats.winks++; ev('wink'); AU.play('wink'); }
   G.winkAmount = () => { // 0..1 lid closure: ease shut, short hold, ease open
     if (!G.wink) return 0; const u = (G.clock - G.wink.t0) / WINK_DUR; if (u >= 1 || u < 0) return 0;
@@ -2496,6 +2513,7 @@ window.BEAST_SOUNDS = {"opus":{"bank":"T2dnUwACAAAAAAAAAAA2IEX0AAAAAOrmoCYBE09wd
       BP.updateEye(b, dt, look);
       if (wl > 0) { const k = Math.min(1, wl * dt * 14); b.gx += (0 - b.gx) * k; b.gy += (0.3 - b.gy) * k; } // Millionaire Wink: look at the player
       const tgt = b.droop || 0; b.lid = tgt >= (b.lid || 0) ? tgt : Math.max(tgt, (b.lid || 0) - dt * 3); // Sleepy Eye lids ease open when it rolls away
+      if (b.lid > 0) { const k = Math.min(1, dt * 6 * b.lid); b.gx += (0 - b.gx) * k; b.gy += (0.28 - b.gy) * k; } // drowsy eye drifts to look down/ahead, so the lid sits across the iris
     }
     BP.updateEye(G.coreEye, dt, null);
   }
